@@ -102,15 +102,22 @@ def invoice_cmd(args):
     labels = set(i['label'] for i in state['invoices'])
     if args.label in labels:
         sys.exit("*** label already in set?")
-    state['invoices'].append(new_invoice(state, args))
+    i = new_invoice(state, args)
+    state['invoices'].append(i)
     write_state(state)
+    output = {'payment_hash': i['payment_hash'],
+              'expiry_time':  i['expiry_time'],
+              'expires_at':   i['expires_at'],
+              'bolt11':       i['bolt11'],
+             }
+    print(json.dumps(output, sort_keys=True, indent=2))
 
 
 def listinvoices_cmd(args):
-    print(int(time.time()))
+    #print(int(time.time()))
     state = read_state()
     timestamp = get_time(state)
-    print(timestamp)
+    #print(timestamp)
     for i in state['invoices']:
         if i['status'] != 'unpaid':
             continue

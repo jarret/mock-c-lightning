@@ -1,6 +1,6 @@
-# Mock of C-lightning Invoicing
+# Mock of C-Lightning Invoicing
 
-This is a utility that will generate fake BOLT11 invoices in the manner of the c-lighting command line interface. It is stateful in that it will list issued invoices.
+This is a utility that will generate fake BOLT11 invoices in the manner of the c-lightning command line interface. It is stateful in that it will list issued invoices.
 
 The objective is to enable regression/unit testing of application code that is driven by issued, paid and expired invoices.
 
@@ -16,7 +16,7 @@ TODO
 
 ## Dependencies
 
-This app uses code from https://github.com/rustyrussell/lightning-payencode to encode BOLT11 invoices, and hence has the same dependicies to be installed via `pip3`.
+This app uses code from https://github.com/rustyrussell/lightning-payencode to encode BOLT11 invoices, and hence has the same dependencies to be installed via `pip3`.
 
 ## License
 
