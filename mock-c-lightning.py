@@ -14,7 +14,9 @@ from lightning_payencode.lnaddr import lnencode, lndecode, LnAddr
 
 STATE_FILE = os.path.join(tempfile.gettempdir(), "mock-c-lightning-state.json")
 
-PRIVATE_KEY = "5dfd297aada5cd327ecdfc89c8bb63cc1f1cc70311ccce1711aaedfc526655f6"
+# This key is used as the private key for signing the invoices. Security isn't
+# the goal in this application, so it is fine to use any old number.
+SIGNING_KEY = "0000111122223333444455556666777788889999aaaabbbbccccddddeeeeffff"
 
 SATOSHIS_PER_BTC = 100000000
 MSATOSHIS_PER_BTC = SATOSHIS_PER_BTC * 1000
@@ -54,7 +56,7 @@ def gen_bolt11(state, args, payment_hash):
     addr.paymenthash = unhexlify(payment_hash)
     addr.tags.append(('d', args.description))
     addr.tags.append(('x', str(args.expiry)))
-    return lnencode(addr, PRIVATE_KEY)
+    return lnencode(addr, SIGNING_KEY)
 
 def get_next_pay_index(state):
     i_list = [i['pay_index'] for i in state['invoices']
