@@ -24,8 +24,11 @@ MSATOSHIS_PER_BTC = SATOSHIS_PER_BTC * 1000
 ###############################################################################
 
 def empty_state():
-    return {'time_offset': 0,
-            'invoices':    []}
+    return {'time_offset':             0,
+            'autoclean_cycle_seconds': 0,
+            'autoclean_last_clean':    None,
+            'autoclean_expired_by':    86400,
+            'invoices':                []}
 
 def read_state():
     if os.path.exists(STATE_FILE):
@@ -88,6 +91,7 @@ def new_invoice(state, args):
 def set_expired(i):
     i['status'] = "expired"
 
+
 def set_paid(state, i):
     pay_index = get_next_pay_index(state)
     i['status'] = "paid"
@@ -96,6 +100,29 @@ def set_paid(state, i):
     # add some fees arbitrarily, so it looks more like a real node
     i['msatoshi_recieved'] = i['msatoshi'] + 33
     i['pay_index'] = pay_index
+
+
+def iter_remaining(now, state):
+    for i in state['invoices']:
+        if i['status'] != 'expired':
+            yield i
+        expired_for = now - i['expiry_time']
+        if expired_for < state['autoclean_expired_by']:
+            yield i
+
+
+def autoclean(now, state):
+    if state['autoclean_cycle_seconds'] == 0:
+        return
+    elapsed = now - state['autoclean_last_clean']
+    if elapsed < state['autoclean_cycle_seconds']:
+        return
+
+    for i in state['invoices']:
+        if i['status'] != 'expired':
+            continue
+    state['invoices'] = list(iter_remaining(now, state))
+    state['autoclean_last_clean'] = now
 
 ###############################################################################
 
@@ -125,8 +152,18 @@ def listinvoices_cmd(args):
             continue
         if timestamp > i['expires_at']:
             set_expired(i)
+    autoclean(timestamp, state)
     write_state(state)
     print(json.dumps(state['invoices'], indent=2, sort_keys=True))
+
+
+def autoclean_cmd(args):
+    state = read_state()
+    timestamp = get_time()
+    state['autoclean_cycle_seconds'] = args.cycle_seconds
+    state['autoclean_last_clean'] = timestamp
+    state['autoclean_expired_by'] = args.expired_by
+    write_state(state)
 
 
 def markpaid_cmd(args):
@@ -155,6 +192,7 @@ parser = argparse.ArgumentParser(description='mock c-lightning')
 subparsers = parser.add_subparsers(dest='subparser_name',
                                    help='sub-command help')
 
+# invoice:
 parser_inv = subparsers.add_parser('invoice', help='invoice help')
 parser_inv.add_argument('msatoshi', type=int, help='msatoshi amount')
 parser_inv.add_argument('label', help='label string of invoice')
@@ -166,17 +204,32 @@ parser_inv.add_argument('preimage',
                          help='preimage value')
 parser_inv.set_defaults(func=invoice_cmd)
 
+# listinvoices:
 parser_list = subparsers.add_parser('listinvoices', help='listinvoices help')
 parser_list.add_argument('--label', help='label string of invoice')
 parser_list.set_defaults(func=listinvoices_cmd)
 
+# autocleaninvoice:
+parser_clean = subparsers.add_parser('autocleaninvoice', help='autocleaninvoice help')
+parser_clean.add_argument('--cycle-seconds', type=int, default=3600,
+                         help=('Perform cleanup every {cycle_seconds} '
+                               '(default 3600), or disable autoclean if 0'))
+parser_clean.add_argument('--expired-by', type=int, default=86400,
+                         help=('Clean up expired invoices that have expired '
+                               'for {expired_by} seconds (default 86400).'))
+parser_clean.set_defaults(func=autoclean_cmd)
+
+
+# markpaid (not c-lightning cmd):
 parser_paid = subparsers.add_parser('markpaid', help='markpaid help')
 parser_paid.add_argument('label', help='label string of invoice')
 parser_paid.set_defaults(func=markpaid_cmd)
 
+# reset (not c-lightning cmd):
 parser_reset = subparsers.add_parser('reset', help='reset help')
 parser_reset.set_defaults(func=reset_cmd)
 
+# advancetime (not c-lightning cmd):
 parser_advancetime = subparsers.add_parser('advancetime',
                                            help='advancetime help')
 parser_advancetime.add_argument('seconds', type=int,
