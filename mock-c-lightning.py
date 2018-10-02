@@ -165,6 +165,26 @@ def autoclean_cmd(args):
     state['autoclean_expired_by'] = args.expired_by
     write_state(state)
 
+def delinvoice_cmd(args):
+    print(args)
+    state = read_state()
+
+    invoice = None
+    for i in state['invoices']:
+        if i['label'] == args.label:
+            invoice = i
+            break
+    if not invoice:
+        sys.exit("*** label not found?")
+    if invoice['status'] != args.status:
+        sys.exit("*** invoice with different status?")
+
+    state['invoices'] = [i for i in state['invoices'] if
+                         i['label'] != args.label]
+
+    write_state(state)
+
+
 
 def markpaid_cmd(args):
     state = read_state()
@@ -219,6 +239,14 @@ parser_clean.add_argument('--expired-by', type=int, default=86400,
                                'for {expired_by} seconds (default 86400).'))
 parser_clean.set_defaults(func=autoclean_cmd)
 
+# delinvoice:
+parser_list = subparsers.add_parser('delinvoice',
+                                    help='Delete invoice {label} with {status}')
+parser_list.add_argument('label', type=str, help='label string of invoice')
+parser_list.add_argument('status', type=str,
+                         choices=['paid', 'unpaid', 'expired'],
+                         help='status of invoice')
+parser_list.set_defaults(func=delinvoice_cmd)
 
 # markpaid (not c-lightning cmd):
 parser_paid = subparsers.add_parser('markpaid', help='markpaid help')
