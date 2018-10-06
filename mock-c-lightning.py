@@ -11,7 +11,6 @@ import hashlib
 from binascii import unhexlify
 from lightning_payencode.lnaddr import lnencode, lndecode, LnAddr
 
-
 STATE_FILE = os.path.join(tempfile.gettempdir(), "mock-c-lightning-state.json")
 
 # This key is used as the private key for signing the invoices. Security isn't
@@ -20,6 +19,11 @@ SIGNING_KEY = "0000111122223333444455556666777788889999aaaabbbbccccddddeeeeffff"
 
 SATOSHIS_PER_BTC = 100000000
 MSATOSHIS_PER_BTC = SATOSHIS_PER_BTC * 1000
+
+# for scale testing bolt11s take a noticeable chunk of time to encode. If it
+# isn't important that it be correct , we can short-circuit and just return a
+# placeholder.
+MOCK_BOLT11 = "lnbc50n1pdm373mpp50hlcjdrcm9u3qqqs4a926g63d3t5qwyndytqjjgknskuvmd9kc2sdz2d4shyapwwpujq6twwehkjcm9ypnx7u3qxys8q6tcv4k8xtpqw4ek2ujlwd68y6twvuazqg3zyqxqzjcuvzstexcj4zcz7ldtkwz8t5pdsghauyhkdqdxccx8ts3ta023xqzwgwxuvlu9eehh97d0qcu9k5a4u2glenrekp7w9sswydl4hneyjqqzkxf54"
 
 ###############################################################################
 
@@ -56,13 +60,14 @@ class DaemonState(dict):
         f.close()
 
     def reset(self):
-        self.update(DaemonState.read_state())
+        self.update(DaemonState.empty_state())
 
 ###############################################################################
 
 class MockDaemon(object):
-    def __init__(self, in_memory):
+    def __init__(self, in_memory, mock_bolt11=False):
         self.state = DaemonState(in_memory)
+        self.mock_bolt11 = mock_bolt11
 
     ###########################################################################
 
@@ -80,7 +85,8 @@ class MockDaemon(object):
         addr.paymenthash = unhexlify(payment_hash)
         addr.tags.append(('d', args.description))
         addr.tags.append(('x', str(args.expiry)))
-        return lnencode(addr, SIGNING_KEY)
+        return (MOCK_BOLT11 if self.mock_bolt11 else
+                lnencode(addr, SIGNING_KEY))
 
     def _get_payment_hash(self, preimage):
         # return the sha256 digest string of the preimage bytes
@@ -291,7 +297,7 @@ class MockDaemon(object):
         parser_reset = subparsers.add_parser('reset', help='reset help')
         parser_reset.set_defaults(cmd=self.reset)
 
-        args = parser.parse_args()
+        args = parser.parse_args(argv)
         if not args.subparser_name:
             parser.print_help()
             return None
@@ -302,6 +308,8 @@ class MockDaemon(object):
 
 if __name__ == "__main__":
     daemon = MockDaemon(False)
-    output = daemon.run_cmd(sys.argv)
+    output = daemon.run_cmd(sys.argv[1:])
     if output:
         print(json.dumps(output, indent=2, sort_keys=True))
+    if (type(output) is list) and (len(output) == 0):
+        print("[]")
