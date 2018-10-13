@@ -13,7 +13,8 @@ This is a very simple implementation, more fleshed-out feature are easy to imagi
 ## Example Use
 
 ### Output Usage
-``` $ ./mock-c-lightning.py -h
+```
+$ ./mock-c-lightning.py -h
 usage: mock-c-lightning.py [-h]
                            {invoice,listinvoices,autocleaninvoice,delinvoice,markpaid,advancetime,reset}
                            ...
@@ -41,13 +42,15 @@ optional arguments:
 Note - this is far from an exact replica of `lightning-cli`
 
 ### List invoices
-```$ ./mock-c-lightning.py listinvoices
+```
+$ ./mock-c-lightning.py listinvoices
 []
 ```
 
 ### Issue invoices and list
 
-```$ ./mock-c-lightning.py invoice 1000 myLabel1 "my description of the first invoice" 3600 5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03
+```
+$ ./mock-c-lightning.py invoice 1000 myLabel1 "my description of the first invoice" 3600 5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03
 {
   "bolt11": "lnbc10n1pduy53dpp5ajm9hwv0nkg9kuz93xrv887t44m3te0jlnpmrurhvltus03y8rxqdpcd4ujqer9wd3hy6tsw35k7m3qdanzqargv5sxv6tjwd6zq6twwehkjcm9xqrrssdnllrzc0mr0h3qay2knvxes2h23vjhq3vl4yld5zynmcsdlk2ms8lh78wvu656k7x63626ttpqjwuzzp3lsy7n5acakqa5t4ln4293qqud8wus",
   "expires_at": 1539465277,
@@ -85,7 +88,8 @@ $ ./mock-c-lightning.py listinvoices
 ```
 ### Mark one paid and advance time to make the other expire and then list
 
-```$ ./mock-c-lightning.py markpaid myLabel2
+```
+$ ./mock-c-lightning.py markpaid myLabel2
 $ ./mock-c-lightning.py advancetime 10000
 $ ./mock-c-lightning.py listinvoices
 [
