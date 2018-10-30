@@ -153,7 +153,7 @@ class MockDaemon(object):
                 i['status'] = "expired"
         self._autoclean(timestamp)
         self.state.write_state()
-        return self.state['invoices']
+        return {'invoices': self.state['invoices']}
 
     ###########################################################################
 
