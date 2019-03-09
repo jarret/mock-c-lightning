@@ -10,12 +10,12 @@ Also, an invoice can be marked paid with the `markpaid` command and they will be
 
 This is a very simple implementation, more fleshed-out feature are easy to imagine, but this is the minimal necessary for my app's needs at present.
 
-## Example Use
+## Example Use (CLI)
 
 ### Output Usage
 ```
-$ ./mock-c-lightning.py -h
-usage: mock-c-lightning.py [-h]
+$ ./mock_c_lightning.py -h
+usage: mock_c_lightning.py [-h]
                            {invoice,listinvoices,autocleaninvoice,delinvoice,markpaid,advancetime,reset}
                            ...
 
@@ -43,28 +43,28 @@ Note - this is far from an exact replica of `lightning-cli`
 
 ### List invoices
 ```
-$ ./mock-c-lightning.py listinvoices
+$ ./mock_c_lightning.py listinvoices
 []
 ```
 
 ### Issue invoices and list
 
 ```
-$ ./mock-c-lightning.py invoice 1000 myLabel1 "my description of the first invoice" 3600 5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03
+$ ./mock_c_lightning.py invoice 1000 myLabel1 "my description of the first invoice" 3600 5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03
 {
   "bolt11": "lnbc10n1pduy53dpp5ajm9hwv0nkg9kuz93xrv887t44m3te0jlnpmrurhvltus03y8rxqdpcd4ujqer9wd3hy6tsw35k7m3qdanzqargv5sxv6tjwd6zq6twwehkjcm9xqrrssdnllrzc0mr0h3qay2knvxes2h23vjhq3vl4yld5zynmcsdlk2ms8lh78wvu656k7x63626ttpqjwuzzp3lsy7n5acakqa5t4ln4293qqud8wus",
   "expires_at": 1539465277,
   "expiry_time": 1539465277,
   "payment_hash": "ecb65bb98f9d905b70458986c39fcbad7715e5f2fcc3b1f07767d7c83e2438cc"
 }
-$ ./mock-c-lightning.py invoice 1000 myLabel2 "my description of the second invoice" 3600 e258d248fda94c63753607f7c4494ee0fcbe92f1a76bfdac795c9d84101eb317
+$ ./mock_c_lightning.py invoice 1000 myLabel2 "my description of the second invoice" 3600 e258d248fda94c63753607f7c4494ee0fcbe92f1a76bfdac795c9d84101eb317
 {
   "bolt11": "lnbc10n1pduy5jlpp5ms986sz8auale8e2smwzwrnwvl9h5wnuqudvah6cnyuz7czq6yrqdp6d4ujqer9wd3hy6tsw35k7m3qdanzqargv5s8xetrdahxggrfdemx76trv5xqrrss6yh8s99j8ze9s6p9aqv2gwmv9pm26mdeq8waf7a3xjx2728zyjt9jjk8znxksuwglvzf9pyn3vjp820m7ncguztfjleeum6gcd8satgqqnpaxt",
   "expires_at": 1539465327,
   "expiry_time": 1539465327,
   "payment_hash": "dc0a7d4047ef3bfc9f2a86dc270e6e67cb7a3a7c071acedf5899382f6040d106"
 }
-$ ./mock-c-lightning.py listinvoices
+$ ./mock_c_lightning.py listinvoices
 [
   {
     "bolt11": "lnbc10n1pduy53dpp5ajm9hwv0nkg9kuz93xrv887t44m3te0jlnpmrurhvltus03y8rxqdpcd4ujqer9wd3hy6tsw35k7m3qdanzqargv5sxv6tjwd6zq6twwehkjcm9xqrrssdnllrzc0mr0h3qay2knvxes2h23vjhq3vl4yld5zynmcsdlk2ms8lh78wvu656k7x63626ttpqjwuzzp3lsy7n5acakqa5t4ln4293qqud8wus",
@@ -89,9 +89,9 @@ $ ./mock-c-lightning.py listinvoices
 ### Mark one paid and advance time to make the other expire and then list
 
 ```
-$ ./mock-c-lightning.py markpaid myLabel2
-$ ./mock-c-lightning.py advancetime 10000
-$ ./mock-c-lightning.py listinvoices
+$ ./mock_c_lightning.py markpaid myLabel2
+$ ./mock_c_lightning.py advancetime 10000
+$ ./mock_c_lightning.py listinvoices
 [
   {
     "bolt11": "lnbc10n1pduy53dpp5ajm9hwv0nkg9kuz93xrv887t44m3te0jlnpmrurhvltus03y8rxqdpcd4ujqer9wd3hy6tsw35k7m3qdanzqargv5sxv6tjwd6zq6twwehkjcm9xqrrssdnllrzc0mr0h3qay2knvxes2h23vjhq3vl4yld5zynmcsdlk2ms8lh78wvu656k7x63626ttpqjwuzzp3lsy7n5acakqa5t4ln4293qqud8wus",
@@ -120,11 +120,25 @@ $ ./mock-c-lightning.py listinvoices
 
 ### Clean up
 ```
-$ ./mock-c-lightning.py delinvoice myLabel1 expired
-$ ./mock-c-lightning.py delinvoice myLabel2 paid
-$ ./mock-c-lightning.py listinvoices
+$ ./mock_c_lightning.py delinvoice myLabel1 expired
+$ ./mock_c_lightning.py delinvoice myLabel2 paid
+$ ./mock_c_lightning.py listinvoices
 []
 ```
+
+
+## Programmatic use
+
+The module [daemon.py](daemon.py) provides example classes `CliMockDaemon`, `MemMockDaemon` and `RealDaemon` that illustrate how this can be integrated into a program. Each implement the interface of the `Daemon` superclass.
+
+### `CliMockDamon`
+This interfaces with this utility via a subprocess shell-out. This is good for observing the state of the daemon on your own, but has the overhead of shelling out to the console and reading/writing from an on-disk JSON database, so it can be slower than `MemMockDaemon`
+
+### `MemMockDamon`
+This instantiates the mock daemon and database as an in-memory object. This is faster for doing many invoices quickly (such as in a rapid-fire unit test), but doesn't provide a CLI interface for checking up on it.
+
+### `RealDaemon`
+This interfaces with the real `c-lightning` daemon via the [pylightning](https://github.com/ElementsProject/lightning/tree/master/contrib/pylightning) module that uses the RPC port.
 
 
 ## Dependencies
