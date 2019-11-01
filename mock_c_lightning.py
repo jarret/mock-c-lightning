@@ -9,7 +9,7 @@ import tempfile
 import hashlib
 
 from binascii import unhexlify
-from lightning_payencode.lnaddr import lnencode, lndecode, LnAddr
+from lightning_payencode.lnaddr import lnencode, LnAddr
 
 STATE_FILE = os.path.join(tempfile.gettempdir(), "mock-c-lightning-state.json")
 
@@ -36,7 +36,7 @@ class DaemonState(dict):
         else:
             self.update(DaemonState.read_state())
 
-
+    @staticmethod
     def empty_state():
         return {'time_offset':             0,
                 'autoclean_cycle_seconds': 0,
@@ -44,6 +44,7 @@ class DaemonState(dict):
                 'autoclean_expired_by':    86400,
                 'invoices':                []}
 
+    @staticmethod
     def read_state():
         if os.path.exists(STATE_FILE):
             f = open(STATE_FILE, 'r')
@@ -103,8 +104,7 @@ class MockDaemon(object):
                 "msatoshi":     args.msatoshi,
                 "status":       "unpaid",
                 "expires_at":   now + args.expiry,
-                "expiry_time":  now + args.expiry
-               }
+                "expiry_time":  now + args.expiry}
 
     def invoice(self, args):
         labels = set(i['label'] for i in self.state['invoices'])
@@ -116,8 +116,7 @@ class MockDaemon(object):
         output = {'payment_hash': i['payment_hash'],
                   'expiry_time':  i['expiry_time'],
                   'expires_at':   i['expires_at'],
-                  'bolt11':       i['bolt11'],
-                 }
+                  'bolt11':       i['bolt11']}
         return output
 
     ###########################################################################
@@ -127,7 +126,7 @@ class MockDaemon(object):
             if i['status'] != 'expired':
                 yield i
             expired_for = now - i['expiry_time']
-            if expired_for < state['autoclean_expired_by']:
+            if expired_for < self.state['autoclean_expired_by']:
                 yield i
 
     def _autoclean(self, now):
@@ -163,7 +162,6 @@ class MockDaemon(object):
         self.state['autoclean_last_clean'] = timestamp
         self.state['autoclean_expired_by'] = args.expired_by
         self.state.write_state()
-        return None
 
     ###########################################################################
 
@@ -174,13 +172,13 @@ class MockDaemon(object):
                 invoice = i
                 break
         if not invoice:
-            return { "code" : -1, "message" : "Unknown invoice" }
+            return {"code": -1, "message": "Unknown invoice"}
         if invoice['status'] != args.status:
-            return { "code" : -1, "message" : "Wrong status" }
+            return {"code": -1, "message": "Wrong status"}
         self.state['invoices'] = [i for i in self.state['invoices'] if
                                   i['label'] != args.label]
         self.state.write_state()
-        return None
+        return invoice
 
     ###########################################################################
 
@@ -205,34 +203,21 @@ class MockDaemon(object):
                 self._set_paid(i)
                 self.state.write_state()
                 return None
-        return { "code" : -1, "message" : "unknown invoice" }
+        return {"code": -1, "message": "unknown invoice"}
 
     ###########################################################################
 
     def advancetime(self, args):
         self.state['time_offset'] = self.state['time_offset'] + args.seconds
         self.state.write_state()
-        return None
 
     ###########################################################################
 
     def reset(self, args):
         self.state.reset()
         self.state.write_state()
-        return None
 
     ###########################################################################
-
-    def run_cmd_old(self, args):
-        cmds = {'invoice':          self.invoice,
-                'listinvoices':     self.listinvoices,
-                'autocleaninvoice': self.autocleaninvoice,
-                'delinvoce':        self.delinvoice,
-                'markpaid':         self.markpaid,
-                'advancetime':      self.advancetime,
-                'reset':            self.reset,
-               }
-        return cmds[args.cmd](args)
 
     def run_cmd(self, argv):
         parser = argparse.ArgumentParser(description='mock c-lightning')
@@ -244,11 +229,11 @@ class MockDaemon(object):
         parser_inv.add_argument('msatoshi', type=int, help='msatoshi amount')
         parser_inv.add_argument('label', help='label string of invoice')
         parser_inv.add_argument('description',
-                                 help='description string for bolt11 invoice')
+                                help='description string for bolt11 invoice')
         parser_inv.add_argument('expiry', type=int,
-                                 help='seconds until invoice expiry')
+                                help='seconds until invoice expiry')
         parser_inv.add_argument('preimage',
-                                 help='preimage value')
+                                help='preimage value')
         parser_inv.set_defaults(cmd=self.invoice)
 
         # listinvoices:
@@ -261,13 +246,13 @@ class MockDaemon(object):
         parser_clean = subparsers.add_parser('autocleaninvoice',
                                              help='autocleaninvoice help')
         parser_clean.add_argument('--cycle-seconds', type=int, default=3600,
-                                 help=('Perform cleanup every {cycle_seconds} '
-                                       '(default 3600), or disable autoclean '
-                                       'if 0'))
+                                  help=('Perform cleanup every {cycle_seconds} '
+                                        '(default 3600), or disable autoclean '
+                                        'if 0'))
         parser_clean.add_argument('--expired-by', type=int, default=86400,
-                                 help=('Clean up expired invoices that have '
-                                       'expired for {expired_by} seconds '
-                                       '(default 86400).'))
+                                  help=('Clean up expired invoices that have '
+                                        'expired for {expired_by} seconds '
+                                        '(default 86400).'))
         parser_clean.set_defaults(cmd=self.autocleaninvoice)
 
         # delinvoice:
@@ -311,5 +296,5 @@ if __name__ == "__main__":
     output = daemon.run_cmd(sys.argv[1:])
     if output:
         print(json.dumps(output, indent=2, sort_keys=True))
-    if (type(output) is list) and (len(output) == 0):
+    if isinstance(output, list) and (len(output) == 0):
         print("[]")
